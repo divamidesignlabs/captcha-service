@@ -5,6 +5,7 @@ export { CaptchaGuard } from './captcha/captcha.guard';
 
 // Decorators
 export { CaptchaToken } from './captcha/decorators/captcha-token.decorator';
+export { SkipCaptcha } from './captcha/decorators/skip-captcha.decorator';
 
 // Enums
 export { CaptchaProvider } from './captcha/enums/captcha-provider.enum';

@@ -5,15 +5,31 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { CaptchaService } from './captcha.service';
+import { SKIP_CAPTCHA_KEY } from './decorators/skip-captcha.decorator';
 
 @Injectable()
 export class CaptchaGuard implements CanActivate {
   private readonly logger = new Logger(CaptchaGuard.name);
 
-  constructor(private readonly captchaService: CaptchaService) {}
+  constructor(
+    private readonly captchaService: CaptchaService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Check if route has @SkipCaptcha() decorator
+    const skipCaptcha = this.reflector.getAllAndOverride<boolean>(
+      SKIP_CAPTCHA_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (skipCaptcha) {
+      this.logger.debug('Captcha validation skipped for this route');
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest();
 
     // Extract token from different possible locations
@@ -21,7 +37,7 @@ export class CaptchaGuard implements CanActivate {
       this.extractTokenFromHeader(request) ||
       this.extractTokenFromBody(request) ||
       this.extractTokenFromQuery(request);
-console.log('Extracted Captcha Token:', token);
+    console.log('Extracted Captcha Token:', token);
     if (!token) {
       this.logger.warn('Captcha token not found in request');
       throw new UnauthorizedException(
