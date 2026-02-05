@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cloudflare Turnstile Test</title>
+    <!-- Load Turnstile script -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background-color: #0051ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0041cc;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        .turnstile-container {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        h1 {
+            color: #0051ff;
+        }
+        h3 {
+            color: #333;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cloudflare Turnstile Test</h1>
+    
+    <!-- Turnstile widget container -->
+    <div class="turnstile-container">
+        <div id="turnstile-widget"></div>
+    </div>
+
+    <button id="loginBtn">Test Login</button>
+    <button id="registerBtn">Test Register</button>
+
+    <h3>Response:</h3>
+    <pre id="response">Click a button to test...</pre>
+
+    <h3>Token:</h3>
+    <pre id="token">No token yet...</pre>
+
+    <script>
+        // Replace with your Cloudflare Turnstile SITE KEY
+        const SITE_KEY = '0x4AAAAAACVV9b4DPWm7aS_D';
+        const API_URL = 'http://localhost:3000'; // your NestJS backend
+        
+        let widgetId = null;
+        let currentToken = null;
+
+        // Initialize Turnstile when page loads
+        window.onload = function() {
+            renderTurnstile();
+        };
+
+        function renderTurnstile() {
+            if (widgetId !== null) {
+                turnstile.remove(widgetId);
+            }
+            
+            widgetId = turnstile.render('#turnstile-widget', {
+                sitekey: SITE_KEY,
+                callback: function(token) {
+                    console.log('Turnstile token received:', token);
+                    currentToken = token;
+                    document.getElementById('token').textContent = 'Token: ' + token;
+                },
+                'error-callback': function(error) {
+                    console.error('Turnstile error:', error);
+                    document.getElementById('token').textContent = 'Error: ' + error;
+                    currentToken = null;
+                },
+                'expired-callback': function() {
+                    console.log('Token expired');
+                    document.getElementById('token').textContent = 'Token expired - please complete the challenge again';
+                    currentToken = null;
+                },
+                theme: 'light',
+                size: 'normal',
+            });
+        }
+
+        // Utility to send token + payload to backend
+        async function sendToBackend(endpoint, payload, token) {
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...payload, captchaToken: token })
+                });
+                const data = await response.json();
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                document.getElementById('response').textContent = 'Error: ' + err.message;
+            }
+        }
+
+        // Login button click
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            if (!currentToken) {
+                alert('Please complete the Turnstile challenge first!');
+                return;
+            }
+
+            document.getElementById('token').textContent = 'Token: ' + currentToken;
+
+            await sendToBackend('/auth/login', {
+                email: 'test@example.com',
+                password: 'password123'
+            }, currentToken);
+
+            // Reset widget after use
+            turnstile.reset(widgetId);
+            currentToken = null;
+        });
+
+        // Register button click
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            if (!currentToken) {
+                alert('Please complete the Turnstile challenge first!');
+                return;
+            }
+
+            document.getElementById('token').textContent = 'Token: ' + currentToken;
+
+            await sendToBackend('/auth/register', {
+                email: 'newuser@example.com',
+                password: 'password123',
+                username: 'testuser'
+            }, currentToken);
+
+            // Reset widget after use
+            turnstile.reset(widgetId);
+            currentToken = null;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google reCAPTCHA v3 Test</title>
+    <!-- Load only the v3 script with your SITE_KEY -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LewB1osAAAAAPr9guyBDthAWNoSTsEuI72sEqSQ"></script>
+</head>
+<body>
+    <h1>Google reCAPTCHA v3 Test</h1>
+
+    <button id="loginBtn">Test Login</button>
+    <button id="registerBtn">Test Register</button>
+
+    <h3>Response:</h3>
+    <pre id="response"></pre>
+
+    <h3>Token:</h3>
+    <pre id="token"></pre>
+
+    <script>
+        const SITE_KEY = '6LewB1osAAAAAPr9guyBDthAWNoSTsEuI72sEqSQ';
+        const API_URL = 'http://localhost:3000'; // your NestJS backend
+
+        // Utility to send token + payload to backend
+        async function sendToBackend(endpoint, payload, token) {
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...payload, captchaToken: token })
+                });
+                const data = await response.json();
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                document.getElementById('response').textContent = 'Error: ' + err.message;
+            }
+        }
+
+        // Login button click
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            grecaptcha.ready(async () => {
+                const token = await grecaptcha.execute(SITE_KEY, { action: 'login' });
+                document.getElementById('token').textContent = 'Token: ' + token;
+
+                await sendToBackend('/auth/login', {
+                    email: 'test@example.com',
+                    password: 'password123'
+                }, token);
+            });
+        });
+
+        // Register button click
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            grecaptcha.ready(async () => {
+                const token = await grecaptcha.execute(SITE_KEY, { action: 'register' });
+                document.getElementById('token').textContent = 'Token: ' + token;
+
+                await sendToBackend('/auth/register', {
+                    email: 'newuser@example.com',
+                    password: 'password123',
+                    username: 'testuser'
+                }, token);
+            });
+        });
+    </script>
+</body>
+</html>
