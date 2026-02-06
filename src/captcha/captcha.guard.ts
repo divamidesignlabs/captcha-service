@@ -35,7 +35,7 @@ export class CaptchaGuard implements CanActivate {
 
     if (!token) {
       throw new UnauthorizedException(
-        'Captcha token is required. Provide it in header (X-Captcha-Token) or body (captchaToken)',
+        'Captcha token is required. Provide it in header (X-Captcha-Token or Authorization: Captcha <token>) or body (captchaToken)',
       );
     }
 

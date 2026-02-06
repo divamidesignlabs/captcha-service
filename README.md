@@ -17,7 +17,7 @@ A production-ready NestJS module for validating **Google reCAPTCHA v3** and **Cl
 ## Installation
 
 ```bash
-npm install @divami-labs/nestjs-captcha
+npm install @divami-labs/captcha-nestjs
 ```
 
 ---
@@ -46,7 +46,7 @@ export class AppModule {}
 
 ```typescript
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
-import { CaptchaGuard } from '@divami-labs/nestjs-captcha';
+import { CaptchaGuard } from '@divami-labs/captcha-nestjs';
 
 @Controller('auth')
 export class AuthController {
@@ -155,7 +155,7 @@ Skip captcha validation for specific routes:
 
 ```typescript
 import { Controller, Get } from '@nestjs/common';
-import { SkipCaptcha } from '@divami-labs/nestjs-captcha';
+import { SkipCaptcha } from '@divami-labs/captcha-nestjs';
 
 @Controller('public')
 @UseGuards(CaptchaGuard) // Applied globally
@@ -180,7 +180,7 @@ Access the validated token in your controller:
 
 ```typescript
 import { Controller, Post, UseGuards } from '@nestjs/common';
-import { CaptchaGuard, CaptchaToken } from '@divami-labs/nestjs-captcha';
+import { CaptchaGuard, CaptchaToken } from '@divami-labs/captcha-nestjs';
 
 @Controller('auth')
 export class AuthController {
@@ -202,7 +202,7 @@ Apply captcha validation globally to all routes:
 ```typescript
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { CaptchaGuard, CaptchaModule } from '@divami-labs/nestjs-captcha';
+import { CaptchaGuard, CaptchaModule } from '@divami-labs/captcha-nestjs';
 
 @Module({
   imports: [CaptchaModule.register({ /* config */ })],
@@ -258,7 +258,7 @@ Injectable service for manual captcha validation:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { CaptchaService } from '@divami-labs/nestjs-captcha';
+import { CaptchaService } from '@divami-labs/captcha-nestjs';
 
 @Injectable()
 export class MyService {
@@ -311,7 +311,7 @@ The guard throws `UnauthorizedException` when:
 
 ```typescript
 import { Test } from '@nestjs/testing';
-import { CaptchaModule, CaptchaProvider } from '@divami-labs/nestjs-captcha';
+import { CaptchaModule, CaptchaProvider } from '@divami-labs/captcha-nestjs';
 
 const moduleRef = await Test.createTestingModule({
   imports: [
@@ -332,7 +332,7 @@ const moduleRef = await Test.createTestingModule({
 ## TypeScript Types
 
 ```typescript
-import type { CaptchaConfig, CaptchaValidationResponse } from '@divami-labs/nestjs-captcha';
+import type { CaptchaConfig, CaptchaValidationResponse } from '@divami-labs/captcha-nestjs';
 
 const config: CaptchaConfig = {
   provider: CaptchaProvider.GOOGLE_RECAPTCHA_V3,
