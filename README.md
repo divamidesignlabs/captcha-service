@@ -1,98 +1,363 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS Captcha Module
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-ready NestJS module for validating **Google reCAPTCHA v3** and **Cloudflare Turnstile** captcha tokens.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+ **Multiple Providers**: Support for Google reCAPTCHA v3 and Cloudflare Turnstile  
+ **Guard-Based Protection**: Easy-to-use `@UseGuards(CaptchaGuard)` decorator  
+ **Flexible Token Extraction**: Accepts tokens from headers or request body  
+ **Skip Routes**: Use `@SkipCaptcha()` decorator to bypass validation on specific routes  
+ **Async Configuration**: Load config from environment variables or ConfigService  
+ **Score Validation**: Configure minimum score threshold for Google reCAPTCHA v3  
+ **TypeScript**: Full type safety with TypeScript support
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Installation
 
 ```bash
-$ npm install
+npm install @divami-labs/captcha-nestjs
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## Quick Start
 
-# watch mode
-$ npm run start:dev
+### 1. Import Module
 
-# production mode
-$ npm run start:prod
+```typescript
+import { Module } from '@nestjs/common';
+import { CaptchaModule, CaptchaProvider } from '@divami/captcha-nestjs';
+
+@Module({
+  imports: [
+    CaptchaModule.register({
+      provider: CaptchaProvider.GOOGLE_RECAPTCHA_V3,
+      secretKey: process.env.RECAPTCHA_SECRET_KEY,
+      minimumScore: 0.5, 
+    }),
+  ],
+})
+export class AppModule {}
 ```
 
-## Run tests
+### 2. Apply Guard to Routes
 
-```bash
-# unit tests
-$ npm run test
+```typescript
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { CaptchaGuard } from '@divami-labs/captcha-nestjs';
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+@Controller('auth')
+export class AuthController {
+  @Post('login')
+  @UseGuards(CaptchaGuard)
+  async login(@Body() body: LoginDto) {
+    // Captcha is already validated by the guard
+    return this.authService.login(body);
+  }
+}
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Configuration
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Synchronous Configuration
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```typescript
+CaptchaModule.register({
+  provider: CaptchaProvider.CLOUDFLARE_TURNSTILE,
+  secretKey: 'your-secret-key',
+  minimumScore: 0.7, // Only for Google reCAPTCHA v3
+  verifyUrl: 'https://custom-verify-url.com', // Optional
+})
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Async Configuration (Recommended)
 
-## Resources
+```typescript
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
-Check out a few resources that may come in handy when working with NestJS:
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    CaptchaModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        provider: config.get('CAPTCHA_PROVIDER') as CaptchaProvider,
+        secretKey: config.get('CAPTCHA_SECRET_KEY'),
+        minimumScore: parseFloat(config.get('CAPTCHA_MINIMUM_SCORE') || '0.5'),
+      }),
+    }),
+  ],
+})
+export class AppModule {}
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Environment Variables
 
-## Support
+```env
+# Google reCAPTCHA v3
+CAPTCHA_PROVIDER=google-v3
+RECAPTCHA_SECRET_KEY=your-google-secret-key
+CAPTCHA_MINIMUM_SCORE=0.5
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# OR Cloudflare Turnstile
+CAPTCHA_PROVIDER=cloudflare-turnstile
+TURNSTILE_SECRET_KEY=your-cloudflare-secret-key
+```
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Sending Captcha Tokens
+
+The guard accepts tokens from **headers** or **request body** (NOT query params).
+
+### Method 1: Custom Header (Recommended)
+
+```typescript
+fetch('/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Captcha-Token': 'your-captcha-token',
+  },
+  body: JSON.stringify({ email, password }),
+});
+```
+
+
+### Method 2: Request Body
+
+```typescript
+fetch('/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email,
+    password,
+    captchaToken: 'your-captcha-token', 
+  }),
+});
+```
+
+---
+
+## Decorators
+
+### `@SkipCaptcha()`
+
+Skip captcha validation for specific routes:
+
+```typescript
+import { Controller, Get } from '@nestjs/common';
+import { SkipCaptcha } from '@divami-labs/captcha-nestjs';
+
+@Controller('public')
+@UseGuards(CaptchaGuard) // Applied globally
+export class PublicController {
+  @Get('health')
+  @SkipCaptcha() // Skip captcha for this route
+  health() {
+    return { status: 'ok' };
+  }
+
+  @Get('data')
+  // Captcha required for this route
+  getData() {
+    return { data: [] };
+  }
+}
+```
+
+### `@CaptchaToken()`
+
+Access the validated token in your controller:
+
+```typescript
+import { Controller, Post, UseGuards } from '@nestjs/common';
+import { CaptchaGuard, CaptchaToken } from '@divami-labs/captcha-nestjs';
+
+@Controller('auth')
+export class AuthController {
+  @Post('register')
+  @UseGuards(CaptchaGuard)
+  async register(@CaptchaToken() token: string) {
+    console.log('Validated captcha token:', token);
+    // Your registration logic
+  }
+}
+```
+
+---
+
+## Global Guard Setup
+
+Apply captcha validation globally to all routes:
+
+```typescript
+import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { CaptchaGuard, CaptchaModule } from '@divami-labs/captcha-nestjs';
+
+@Module({
+  imports: [CaptchaModule.register({ /* config */ })],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: CaptchaGuard,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+Then use `@SkipCaptcha()` on public routes.
+
+---
+
+## Providers
+
+### Google reCAPTCHA v3
+
+```typescript
+CaptchaModule.register({
+  provider: CaptchaProvider.GOOGLE_RECAPTCHA_V3,
+  secretKey: 'your-google-secret-key',
+  minimumScore: 0.5, // 0.0 (bot) to 1.0 (human)
+})
+```
+
+- **Score Range**: 0.0 (likely bot) to 1.0 (likely human)
+- **Recommended Minimum**: 0.5 (configurable)
+- **Invisible**: No user interaction required
+
+### Cloudflare Turnstile
+
+```typescript
+CaptchaModule.register({
+  provider: CaptchaProvider.CLOUDFLARE_TURNSTILE,
+  secretKey: 'your-cloudflare-secret-key',
+})
+```
+
+- **Modes**: Invisible or checkbox (configured on frontend)
+- **No Score**: Binary pass/fail validation
+
+---
+
+## API Reference
+
+### `CaptchaService`
+
+Injectable service for manual captcha validation:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { CaptchaService } from '@divami-labs/captcha-nestjs';
+
+@Injectable()
+export class MyService {
+  constructor(private captchaService: CaptchaService) {}
+
+  async validateCaptcha(token: string) {
+    const result = await this.captchaService.validateToken(token);
+    
+    if (result.success) {
+      console.log('Score:', result.score); // Google reCAPTCHA v3 only
+      console.log('Action:', result.action);
+    } else {
+      console.error('Validation failed:', result.message);
+    }
+    
+    return result;
+  }
+}
+```
+
+#### Methods
+
+- `validateToken(token: string): Promise<CaptchaValidationResponse>`
+- `getProvider(): CaptchaProvider`
+- `getMinimumScore(): number | undefined`
+
+---
+
+## Error Handling
+
+The guard throws `UnauthorizedException` when:
+
+- Token is missing
+- Token validation fails
+- Score is below minimum threshold (Google reCAPTCHA v3)
+
+```typescript
+{
+  "statusCode": 401,
+  "message": "Captcha token is required. Provide it in header (X-Captcha-Token or Authorization: Captcha <token>) or body (captchaToken)",
+  "error": "Unauthorized"
+}
+```
+
+---
+
+## Testing
+
+### Skip Captcha in Tests
+
+```typescript
+import { Test } from '@nestjs/testing';
+import { CaptchaModule, CaptchaProvider } from '@divami-labs/captcha-nestjs';
+
+const moduleRef = await Test.createTestingModule({
+  imports: [
+    CaptchaModule.register({
+      provider: CaptchaProvider.GOOGLE_RECAPTCHA_V3,
+      secretKey: 'test-key',
+    }),
+  ],
+  controllers: [AuthController],
+})
+  .overrideGuard(CaptchaGuard)
+  .useValue({ canActivate: () => true }) // Mock guard
+  .compile();
+```
+
+---
+
+## TypeScript Types
+
+```typescript
+import type { CaptchaConfig, CaptchaValidationResponse } from '@divami-labs/captcha-nestjs';
+
+const config: CaptchaConfig = {
+  provider: CaptchaProvider.GOOGLE_RECAPTCHA_V3,
+  secretKey: 'key',
+  minimumScore: 0.5,
+};
+
+const response: CaptchaValidationResponse = {
+  success: true,
+  score: 0.9,
+  action: 'login',
+  challenge_ts: '2026-02-05T12:00:00Z',
+  hostname: 'example.com',
+};
+```
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT
+
+---
+
+## Support
+
+- **Google reCAPTCHA v3**: [Documentation](https://developers.google.com/recaptcha/docs/v3)
+- **Cloudflare Turnstile**: [Documentation](https://developers.cloudflare.com/turnstile/)

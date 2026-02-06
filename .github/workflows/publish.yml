@@ -1,25 +1,20 @@
 name: Publish Package
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Version bump type (patch, minor, major)"
-        required: true
-        default: "patch"
+  push:
+    branches:
+      - main
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write   # required to push version tags
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -30,13 +25,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Bump version
-        run: npm version ${{ github.event.inputs.release_type }}
+      - name: Build project
+        run: npm run build --if-present
 
-      - name: Push version tag
-        run: git push --follow-tags
+      - name: Check if version already exists on npm
+        id: check_version
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+
+          if npm view "$PACKAGE_NAME@$VERSION" version > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Publish to npm
+        if: steps.check_version.outputs.exists == 'false'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skip publish (version already exists)
+        if: steps.check_version.outputs.exists == 'true'
+        run: echo "Version already exists on npm. Skipping publish."

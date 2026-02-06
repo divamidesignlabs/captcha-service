@@ -1,6 +1,6 @@
 {
-  "name": "@anantha/nestjs-captcha",
-  "version": "0.1.0",
+  "name": "@divami-labs/nestjs-captcha",
+  "version": "0.0.1",
   "description": "NestJS CAPTCHA module supporting Google reCAPTCHA and Cloudflare Turnstile",
   "author": "Anantha Gatta",
   "license": "MIT",
