@@ -3,7 +3,6 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
-  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CaptchaService } from './captcha.service';
@@ -11,8 +10,6 @@ import { SKIP_CAPTCHA_KEY } from './decorators/skip-captcha.decorator';
 
 @Injectable()
 export class CaptchaGuard implements CanActivate {
-  private readonly logger = new Logger(CaptchaGuard.name);
-
   constructor(
     private readonly captchaService: CaptchaService,
     private readonly reflector: Reflector,
@@ -26,22 +23,19 @@ export class CaptchaGuard implements CanActivate {
     );
 
     if (skipCaptcha) {
-      this.logger.debug('Captcha validation skipped for this route');
       return true;
     }
 
     const request = context.switchToHttp().getRequest();
 
-    // Extract token from different possible locations
+    // Extract token from header or body only
     const token =
       this.extractTokenFromHeader(request) ||
-      this.extractTokenFromBody(request) ||
-      this.extractTokenFromQuery(request);
-    console.log('Extracted Captcha Token:', token);
+      this.extractTokenFromBody(request);
+
     if (!token) {
-      this.logger.warn('Captcha token not found in request');
       throw new UnauthorizedException(
-        'Captcha token is required. Provide it in header (X-Captcha-Token), body (captchaToken), or query (?captchaToken=...)',
+        'Captcha token is required. Provide it in header (X-Captcha-Token or Authorization: Captcha <token>) or body (captchaToken)',
       );
     }
 
@@ -49,11 +43,6 @@ export class CaptchaGuard implements CanActivate {
     const validationResult = await this.captchaService.validateToken(token);
 
     if (!validationResult.success) {
-      this.logger.warn('Captcha validation failed', {
-        errors: validationResult['error-codes'] || validationResult.errors,
-        score: validationResult.score,
-      });
-
       throw new UnauthorizedException(
         validationResult.message || 'Captcha validation failed',
       );
@@ -62,11 +51,6 @@ export class CaptchaGuard implements CanActivate {
     // Attach token and validation result to request for later use
     request.captchaToken = token;
     request.captchaValidation = validationResult;
-
-    this.logger.debug('Captcha validation successful', {
-      score: validationResult.score,
-      action: validationResult.action,
-    });
 
     return true;
   }
@@ -80,10 +64,6 @@ export class CaptchaGuard implements CanActivate {
       return captchaHeader;
     }
 
-    const authHeader = request.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Captcha ')) {
-      return authHeader.substring(8);
-    }
 
     return null;
   }
@@ -93,12 +73,5 @@ export class CaptchaGuard implements CanActivate {
    */
   private extractTokenFromBody(request: any): string | null {
     return request.body?.captchaToken || request.body?.captcha_token || null;
-  }
-
-  /**
-   * Extract token from query parameters
-   */
-  private extractTokenFromQuery(request: any): string | null {
-    return request.query?.captchaToken || request.query?.captcha_token || null;
   }
 }
