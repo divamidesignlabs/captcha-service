@@ -1,5 +1,5 @@
 {
-  "name": "@divami-labs/nestjs-captcha",
+  "name": "@divami-labs/captcha-nestjs",
   "version": "0.0.1",
   "description": "NestJS CAPTCHA module supporting Google reCAPTCHA and Cloudflare Turnstile",
   "author": "Anantha Gatta",
