@@ -3,29 +3,24 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Inject,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { CaptchaService } from './captcha.service';
-import { SKIP_CAPTCHA_KEY } from './decorators/skip-captcha.decorator';
+import { type CaptchaConfig } from './interfaces/captcha-config.interface';
 
 @Injectable()
 export class CaptchaGuard implements CanActivate {
   constructor(
     private readonly captchaService: CaptchaService,
-    private readonly reflector: Reflector,
+    @Inject('CAPTCHA_CONFIG') private readonly config: CaptchaConfig,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Check if route has @SkipCaptcha() decorator
-    const skipCaptcha = this.reflector.getAllAndOverride<boolean>(
-      SKIP_CAPTCHA_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-
-    if (skipCaptcha) {
+    // Check if captcha is enabled in configuration (default: true)
+    if (this.config.enabled === false) {
       return true;
     }
-
+   
     const request = context.switchToHttp().getRequest();
 
     // Extract token from header or body only
@@ -35,7 +30,7 @@ export class CaptchaGuard implements CanActivate {
 
     if (!token) {
       throw new UnauthorizedException(
-        'Captcha token is required. Provide it in header (X-Captcha-Token or Authorization: Captcha <token>) or body (captchaToken)',
+        'Captcha token is required. Provide it in header (X-Captcha-Token) or body (captchaToken)',
       );
     }
 
