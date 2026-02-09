@@ -21,7 +21,7 @@ export class CaptchaModule {
         CaptchaService,
         CaptchaGuard,
       ],
-      exports: [CaptchaService, CaptchaGuard],
+      exports: ['CAPTCHA_CONFIG', CaptchaService, CaptchaGuard],
     };
   }
 
@@ -57,7 +57,7 @@ export class CaptchaModule {
         CaptchaService,
         CaptchaGuard,
       ],
-      exports: [CaptchaService, CaptchaGuard],
+      exports: ['CAPTCHA_CONFIG', CaptchaService, CaptchaGuard],
     };
   }
 }

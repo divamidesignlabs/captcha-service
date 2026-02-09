@@ -3,6 +3,7 @@ import { CaptchaProvider } from '../enums/captcha-provider.enum';
 export interface CaptchaConfig {
   provider: CaptchaProvider;
   secretKey: string;
+  enabled?: boolean;
   minimumScore?: number;
   verifyUrl?: string; 
 }
