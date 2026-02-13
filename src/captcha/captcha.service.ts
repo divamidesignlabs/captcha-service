@@ -77,33 +77,39 @@ private async validateGoogleRecaptcha(
 
   const data: GoogleRecaptchaResponse = await response.json();
 
-  const minimumScore = this.config.minimumScore ?? 0.5;
-  const scoreValid = data.score >= minimumScore;
-
-  // Check if token is expired
-  if (this.isTokenExpired(data['error-codes'])) {
+  // Check if validation was unsuccessful first
+  if (!data.success) {
+    // Check if token is expired
+    if (this.isTokenExpired(data['error-codes'])) {
+      return {
+        success: false,
+        'error-codes': data['error-codes'],
+        message: 'Captcha expired. Please try again.',
+      };
+    }
+    
     return {
       success: false,
-      score: data.score,
-      action: data.action,
-      challenge_ts: data.challenge_ts,
-      hostname: data.hostname,
       'error-codes': data['error-codes'],
-      message: 'Captcha expired. Please try again.',
+      message: 'Captcha validation failed',
     };
   }
 
+  // If successful, validate score
+  const minimumScore = this.config.minimumScore ?? 0.5;
+  const scoreValid = data.score >= minimumScore;
+
   return {
-    success: data.success && scoreValid,
+    success: scoreValid,
     score: data.score,
     action: data.action,
     challenge_ts: data.challenge_ts,
     hostname: data.hostname,
     'error-codes': data['error-codes'],
     message:
-      data.success && scoreValid
+      scoreValid
         ? 'Captcha validated successfully'
-        : `Captcha validation failed${!scoreValid ? ': score too low' : ''}`,
+        : 'Captcha validation failed: score too low',
   };
 }
 
@@ -131,27 +137,31 @@ private async validateGoogleRecaptcha(
 
     const data: CloudflareResponse = await response.json();
 
-    // Check if token is expired
-    if (this.isTokenExpired(data['error-codes'])) {
+    // Check if validation was unsuccessful first
+    if (!data.success) {
+      // Check if token is expired
+      if (this.isTokenExpired(data['error-codes'])) {
+        return {
+          success: false,
+          'error-codes': data['error-codes'],
+          message: 'Captcha expired. Please try again.',
+        };
+      }
+      
       return {
         success: false,
-        challenge_ts: data.challenge_ts,
-        hostname: data.hostname,
-        action: data.action,
         'error-codes': data['error-codes'],
-        message: 'Captcha expired. Please try again.',
+        message: 'Captcha validation failed',
       };
     }
 
     return {
-      success: data.success,
+      success: true,
       challenge_ts: data.challenge_ts,
       hostname: data.hostname,
       action: data.action,
       'error-codes': data['error-codes'],
-      message: data.success
-        ? 'Captcha validated successfully'
-        : 'Captcha validation failed',
+      message: 'Captcha validated successfully',
     };
   }
 
