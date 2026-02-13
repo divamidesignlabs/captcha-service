@@ -103,7 +103,7 @@ private async validateGoogleRecaptcha(
     message:
       data.success && scoreValid
         ? 'Captcha validated successfully'
-        : `Validation failed${!scoreValid ? ': score too low' : ''}`,
+        : `Captcha validation failed${!scoreValid ? ': score too low' : ''}`,
   };
 }
 
@@ -151,7 +151,7 @@ private async validateGoogleRecaptcha(
       'error-codes': data['error-codes'],
       message: data.success
         ? 'Captcha validated successfully'
-        : 'Validation failed',
+        : 'Captcha validation failed',
     };
   }
 
