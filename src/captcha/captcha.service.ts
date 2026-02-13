@@ -6,6 +6,7 @@ import {
   CloudflareResponse,
 } from './interfaces/captcha-response.interface';
 import type { CaptchaConfig } from './interfaces/captcha-config.interface';
+import { expirationCodes } from './Constants';
 
 @Injectable()
 export class CaptchaService {
@@ -77,20 +78,39 @@ private async validateGoogleRecaptcha(
 
   const data: GoogleRecaptchaResponse = await response.json();
 
+  // Check if validation was unsuccessful first
+  if (!data.success) {
+    // Check if token is expired
+    if (this.isTokenExpired(data['error-codes'])) {
+      return {
+        success: false,
+        'error-codes': data['error-codes'],
+        message: 'Captcha expired. Please try again.',
+      };
+    }
+    
+    return {
+      success: false,
+      'error-codes': data['error-codes'],
+      message: 'Captcha validation failed.',
+    };
+  }
+
+  // If successful, validate score
   const minimumScore = this.config.minimumScore ?? 0.5;
   const scoreValid = data.score >= minimumScore;
 
   return {
-    success: data.success && scoreValid,
+    success: scoreValid,
     score: data.score,
     action: data.action,
     challenge_ts: data.challenge_ts,
     hostname: data.hostname,
     'error-codes': data['error-codes'],
     message:
-      data.success && scoreValid
-        ? 'Captcha validated successfully'
-        : `Validation failed${!scoreValid ? ': score too low' : ''}`,
+      scoreValid
+        ? 'Captcha validated successfully.'
+        : 'Captcha validation failed: score is too low.',
   };
 }
 
@@ -118,15 +138,31 @@ private async validateGoogleRecaptcha(
 
     const data: CloudflareResponse = await response.json();
 
+    // Check if validation was unsuccessful first
+    if (!data.success) {
+      // Check if token is expired
+      if (this.isTokenExpired(data['error-codes'])) {
+        return {
+          success: false,
+          'error-codes': data['error-codes'],
+          message: 'Captcha expired. Please try again.',
+        };
+      }
+      
+      return {
+        success: false,
+        'error-codes': data['error-codes'],
+        message: 'Captcha validation failed',
+      };
+    }
+
     return {
-      success: data.success,
+      success: true,
       challenge_ts: data.challenge_ts,
       hostname: data.hostname,
       action: data.action,
       'error-codes': data['error-codes'],
-      message: data.success
-        ? 'Captcha validated successfully'
-        : 'Validation failed',
+      message: 'Captcha validated successfully',
     };
   }
 
@@ -142,5 +178,15 @@ private async validateGoogleRecaptcha(
    */
   getMinimumScore(): number | undefined {
     return this.config.minimumScore;
+  }
+
+  /**
+   * Check if error codes indicate token expiration
+   */
+  private isTokenExpired(errorCodes?: string[]): boolean {
+    if (!errorCodes || errorCodes.length === 0) return false;
+    
+    
+    return errorCodes.some(code => expirationCodes.includes(code));
   }
 }

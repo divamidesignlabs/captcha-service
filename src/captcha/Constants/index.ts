@@ -1,0 +1,1 @@
+export const expirationCodes = ['timeout-or-duplicate', 'expired'];
