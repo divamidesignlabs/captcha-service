@@ -6,6 +6,7 @@ import {
   CloudflareResponse,
 } from './interfaces/captcha-response.interface';
 import type { CaptchaConfig } from './interfaces/captcha-config.interface';
+import { expirationCodes } from './Constants';
 
 @Injectable()
 export class CaptchaService {
@@ -91,7 +92,7 @@ private async validateGoogleRecaptcha(
     return {
       success: false,
       'error-codes': data['error-codes'],
-      message: 'Captcha validation failed',
+      message: 'Captcha validation failed.',
     };
   }
 
@@ -108,8 +109,8 @@ private async validateGoogleRecaptcha(
     'error-codes': data['error-codes'],
     message:
       scoreValid
-        ? 'Captcha validated successfully'
-        : 'Captcha validation failed: score too low',
+        ? 'Captcha validated successfully.'
+        : 'Captcha validation failed: score is too low.',
   };
 }
 
@@ -185,7 +186,7 @@ private async validateGoogleRecaptcha(
   private isTokenExpired(errorCodes?: string[]): boolean {
     if (!errorCodes || errorCodes.length === 0) return false;
     
-    const expirationCodes = ['timeout-or-duplicate', 'expired'];
+    
     return errorCodes.some(code => expirationCodes.includes(code));
   }
 }
