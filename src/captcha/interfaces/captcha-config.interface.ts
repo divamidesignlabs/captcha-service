@@ -5,7 +5,9 @@ export interface CaptchaConfig {
   secretKey: string;
   enabled?: boolean;
   minimumScore?: number;
-  verifyUrl?: string; 
+  verifyUrl?: string;
+  projectId?: string; // Required for Google reCAPTCHA Enterprise
+  apiKey?: string;    // Required for Google reCAPTCHA Enterprise
 }
 
 export interface GoogleRecaptchaConfig {
